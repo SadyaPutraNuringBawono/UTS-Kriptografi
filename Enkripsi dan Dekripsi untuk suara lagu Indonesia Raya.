@@ -1,0 +1,85 @@
+!pip install pydub
+!apt-get install ffmpeg
+!pip install pycryptodome
+
+from Crypto.Cipher import DES
+from Crypto.Util.Padding import pad, unpad
+import numpy as np
+from google.colab import files  # Menggunakan Colab
+
+# Fungsi untuk membaca file audio sebagai byte
+def read_audio(file_path):
+    try:
+        with open(file_path, 'rb') as audio_file:
+            return audio_file.read()
+    except FileNotFoundError:
+        print(f"File {file_path} tidak ditemukan.")
+        return None
+    except Exception as e:
+        print(f"Terjadi kesalahan saat membaca file: {e}")
+        return None
+
+# Fungsi untuk menyimpan byte ke dalam file audio
+def save_audio(file_path, data):
+    try:
+        with open(file_path, 'wb') as audio_file:
+            audio_file.write(data)
+    except Exception as e:
+        print(f"Terjadi kesalahan saat menyimpan file: {e}")
+
+# Fungsi untuk melakukan enkripsi pada file audio
+def des_encrypt_audio(key, audio_data):
+    cipher = DES.new(key, DES.MODE_ECB)  # Menggunakan mode ECB untuk enkripsi
+    padded_data = pad(audio_data, DES.block_size)  # Padding untuk ukuran blok
+    encrypted_data = cipher.encrypt(padded_data)
+    return encrypted_data
+
+# Fungsi untuk melakukan dekripsi pada file audio
+def des_decrypt_audio(key, encrypted_data):
+    cipher = DES.new(key, DES.MODE_ECB)  # Menggunakan mode ECB untuk dekripsi
+    decrypted_padded_data = cipher.decrypt(encrypted_data)
+    decrypted_data = unpad(decrypted_padded_data, DES.block_size)
+    return decrypted_data
+
+# Validasi kunci untuk memastikan panjangnya 8 byte
+key = b'11422073'  # Kunci harus sepanjang 8 byte
+if len(key) != 8:
+    raise ValueError("Kunci harus sepanjang 8 byte.")
+
+# Nama file audio
+audio_file_name = 'Indonesia Raya.mp3'  # Ganti dengan nama file audio yang Anda miliki
+
+# Baca file audio sebagai byte
+audio_data = read_audio(audio_file_name)
+if audio_data is None:
+    exit(1)  # Keluar jika terjadi kesalahan saat membaca file
+
+# Path untuk menyimpan audio terenkripsi dan terdekripsi
+encrypted_audio_path = 'encrypted_' + audio_file_name
+decrypted_audio_path = 'decrypted_' + audio_file_name
+
+# Enkripsi file audio
+encrypted_audio_data = des_encrypt_audio(key, audio_data)
+save_audio(encrypted_audio_path, encrypted_audio_data)
+print(f"File audio terenkripsi disimpan di: {encrypted_audio_path}")
+
+# Unggah file audio terenkripsi untuk dekripsi (menggunakan Colab)
+print("Silakan unggah file terenkripsi untuk dekripsi:")
+uploaded = files.upload()
+
+# Ambil nama file yang diunggah
+encrypted_uploaded_file_name = list(uploaded.keys())[0]
+
+
+# Membaca data dari file audio terenkripsi yang diunggah
+uploaded_encrypted_data = read_audio(encrypted_uploaded_file_name)
+if uploaded_encrypted_data is None:
+    exit(1)  # Keluar jika terjadi kesalahan saat membaca file
+
+
+# Dekripsi file audio yang diunggah
+decrypted_audio_data = des_decrypt_audio(key, uploaded_encrypted_data)
+
+# Menyimpan audio yang didekripsi
+save_audio(decrypted_audio_path, decrypted_audio_data)
+print(f"File audio hasil dekripsi disimpan di: {decrypted_audio_path}")
