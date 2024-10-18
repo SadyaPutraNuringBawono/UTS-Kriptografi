@@ -1,0 +1,79 @@
+import gdown
+import os
+from Crypto.Cipher import DES
+from Crypto.Util.Padding import pad, unpad
+from google.colab import files
+
+# Fungsi untuk mengunduh file dari Google Drive
+def download_video_from_drive(drive_url, output_path):
+    try:
+        gdown.download(drive_url, output_path, quiet=False)
+        print(f"Video berhasil diunduh: {output_path}")
+    except Exception as e:
+        print(f"Terjadi kesalahan saat mengunduh video: {e}")
+
+# Fungsi untuk membaca file video sebagai byte
+def read_video(file_path):
+    try:
+        with open(file_path, 'rb') as video_file:
+            return video_file.read()
+    except FileNotFoundError:
+        print(f"File {file_path} tidak ditemukan.")
+        return None
+    except Exception as e:
+        print(f"Terjadi kesalahan saat membaca file: {e}")
+        return None
+
+# Fungsi untuk menyimpan byte ke dalam file video
+def save_video(file_path, data):
+    with open(file_path, 'wb') as video_file:
+        video_file.write(data)
+
+# Fungsi untuk melakukan enkripsi pada file video
+def des_encrypt_video(key, video_data):
+    cipher = DES.new(key, DES.MODE_ECB)
+    padded_data = pad(video_data, DES.block_size)
+    encrypted_data = cipher.encrypt(padded_data)
+    return encrypted_data
+
+# Fungsi untuk melakukan dekripsi pada file video
+def des_decrypt_video(key, encrypted_data):
+    cipher = DES.new(key, DES.MODE_ECB)
+    decrypted_padded_data = cipher.decrypt(encrypted_data)
+    decrypted_data = unpad(decrypted_padded_data, DES.block_size)
+    return decrypted_data
+
+# Validasi kunci untuk memastikan panjangnya 8 byte
+key = b'11422073'  # Kunci harus sepanjang 8 byte
+if len(key) != 8:
+    raise ValueError("Kunci harus sepanjang 8 byte.")
+
+# URL Google Drive dan nama file output
+drive_url = 'https://drive.google.com/uc?id=1MFIwLXogeH_GbUtMQbf1FQ4ZRk7O6uIi'
+video_file_name = 'video.mp4'
+
+# Unduh video dari Google Drive
+download_video_from_drive(drive_url, video_file_name)
+
+# Baca file video
+video_data = read_video(video_file_name)
+if video_data is None:
+    exit(1)
+
+# Enkripsi video
+encrypted_video_data = des_encrypt_video(key, video_data)
+encrypted_file_name = 'encrypted_' + video_file_name
+save_video(encrypted_file_name, encrypted_video_data)
+print(f"File video terenkripsi disimpan di: {encrypted_file_name}")
+
+# Berikan opsi untuk mengunduh file terenkripsi
+files.download(encrypted_file_name)
+
+# Dekripsi video
+decrypted_video_data = des_decrypt_video(key, encrypted_video_data)
+decrypted_file_name = 'decrypted_' + video_file_name
+save_video(decrypted_file_name, decrypted_video_data)
+print(f"File video hasil dekripsi disimpan di: {decrypted_file_name}")
+
+# Berikan opsi untuk mengunduh file terdekripsi
+files.download(decrypted_file_name)
